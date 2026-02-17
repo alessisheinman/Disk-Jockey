@@ -1,0 +1,223 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #ffffff;
+  --background: #0a0a0a;
+  --race-green: #1db954;
+  --race-track: #8b4513;
+  --spotify-green: #1db954;
+}
+
+body {
+  color: var(--foreground);
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Race track styles */
+.race-track {
+  background: linear-gradient(
+    to bottom,
+    #d4a574 0%,
+    #c4966a 10%,
+    #b8895f 50%,
+    #c4966a 90%,
+    #d4a574 100%
+  );
+  border-top: 3px solid #8b4513;
+  border-bottom: 3px solid #8b4513;
+  position: relative;
+}
+
+.race-track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent 20px,
+    rgba(255, 255, 255, 0.3) 20px,
+    rgba(255, 255, 255, 0.3) 40px
+  );
+  transform: translateY(-50%);
+}
+
+/* Horse animation */
+.horse-icon {
+  transition: transform 0.5s ease-out;
+}
+
+.horse-running .horse-icon {
+  animation: gallop 0.2s ease-in-out infinite;
+}
+
+@keyframes gallop {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-spotify-green text-white font-semibold py-3 px-6 rounded-full
+         transition-all duration-200 hover:scale-105 hover:shadow-lg
+         hover:shadow-spotify-green/30 disabled:opacity-50 disabled:cursor-not-allowed
+         disabled:hover:scale-100 disabled:hover:shadow-none;
+}
+
+.btn-secondary {
+  @apply bg-white/10 text-white font-semibold py-3 px-6 rounded-full
+         border border-white/20 transition-all duration-200 hover:bg-white/20
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Input styles */
+.input-field {
+  @apply w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3
+         text-white placeholder-white/50 focus:outline-none focus:border-spotify-green
+         focus:ring-2 focus:ring-spotify-green/30 transition-all duration-200;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6;
+}
+
+/* Glow effect */
+.glow {
+  box-shadow: 0 0 30px rgba(29, 185, 84, 0.3);
+}
+
+/* Eliminated overlay */
+.eliminated-overlay {
+  @apply absolute inset-0 bg-black/60 flex items-center justify-center;
+}
+
+.eliminated-text {
+  @apply text-red-500 font-bold text-lg tracking-wider transform -rotate-12;
+}
+
+/* Result badges */
+.result-badge {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+}
+
+.result-both {
+  @apply bg-green-500/20 text-green-400 border border-green-500/30;
+}
+
+.result-one {
+  @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+}
+
+.result-none {
+  @apply bg-red-500/20 text-red-400 border border-red-500/30;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-2 bg-white/10 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-spotify-green transition-all duration-300 ease-out;
+}
+
+/* Confetti animation */
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  animation: confetti-fall 3s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Pulse animation for waiting */
+.pulse-waiting {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+/* Slide up animation */
+.slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Bounce in animation */
+.bounce-in {
+  animation: bounce-in 0.6s ease-out forwards;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
