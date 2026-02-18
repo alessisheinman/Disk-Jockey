@@ -211,7 +211,7 @@ export class SpotifyService {
       }
 
       // Handle different response structures - track could be nested or direct
-      const track = item.track || item;
+      const track = item.track as any;
 
       if (!track || !track.id) {
         console.log('Skipping item - no track or track id');
@@ -253,7 +253,7 @@ export class SpotifyService {
 
       for (const item of nextItems) {
         if (item.is_local) continue;
-        const track = item.track || item;
+        const track = item.track as any;
         if (!track || !track.id) continue;
 
         tracks.push({
