@@ -225,12 +225,12 @@ app.prepare().then(() => {
           return;
         }
 
-        // Get playlist info and tracks
-        console.log('Fetching playlist info and tracks...');
-        const [playlistInfo, tracks] = await Promise.all([
-          spotifyService.getPlaylistInfo(room.spotifyAuth.accessToken, playlistId),
-          spotifyService.getPlaylistTracks(room.spotifyAuth.accessToken, playlistId),
-        ]);
+        // Get playlist info and tracks in a single API call
+        console.log('Fetching playlist...');
+        const { info: playlistInfo, tracks } = await spotifyService.getPlaylistWithTracks(
+          room.spotifyAuth.accessToken,
+          playlistId
+        );
         console.log('Playlist info:', playlistInfo);
         console.log('Tracks count:', tracks.length);
 

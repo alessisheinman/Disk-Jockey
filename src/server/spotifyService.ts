@@ -116,47 +116,11 @@ export class SpotifyService {
   }
 
   /**
-   * Get playlist info
+   * Get playlist info and tracks in a single API call
    */
-  async getPlaylistInfo(accessToken: string, playlistId: string): Promise<PlaylistInfo> {
-    const response = await fetch(
-      `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+  async getPlaylistWithTracks(accessToken: string, playlistId: string): Promise<{ info: PlaylistInfo; tracks: Track[] }> {
+    console.log('Getting playlist with tracks for:', playlistId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Spotify getPlaylistInfo failed:', response.status, errorText);
-      throw new Error(`Failed to get playlist info: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    return {
-      id: data.id,
-      name: data.name,
-      imageUrl: data.images?.[0]?.url || null,
-      trackCount: data.tracks?.total || data.tracks?.items?.length || data.items?.length || 0,
-    };
-  }
-
-  /**
-   * Get all tracks from a playlist using the main playlist endpoint
-   * (the /tracks endpoint returns 403 for apps in Development Mode)
-   */
-  async getPlaylistTracks(
-    accessToken: string,
-    playlistId: string
-  ): Promise<Track[]> {
-    const tracks: Track[] = [];
-
-    console.log('Getting playlist tracks for:', playlistId);
-
-    // Get the playlist with tracks included
     const response = await fetch(
       `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
       {
@@ -174,49 +138,36 @@ export class SpotifyService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
-      let errorMsg = `Failed to get playlist: ${response.status}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error?.message) {
-          errorMsg = `Spotify error: ${errorJson.error.message}`;
-        }
-      } catch {}
-      throw new Error(errorMsg);
+      console.error('Spotify getPlaylistWithTracks failed:', response.status, errorText);
+      throw new Error(`Failed to get playlist: ${response.status}`);
     }
 
-    const playlist = await response.json();
-    console.log('Playlist response keys:', Object.keys(playlist));
-    console.log('playlist.tracks type:', typeof playlist.tracks);
-    console.log('playlist.tracks?.items type:', typeof playlist.tracks?.items);
+    const data = await response.json();
+    console.log('Playlist response keys:', Object.keys(data));
 
-    // Tracks can be in playlist.tracks.items OR playlist.items depending on endpoint
-    let items: SpotifyPlaylistTrack[] = [];
-    if (Array.isArray(playlist.tracks?.items)) {
-      items = playlist.tracks.items;
-    } else if (Array.isArray(playlist.items)) {
-      items = playlist.items;
+    // Extract playlist info
+    const info: PlaylistInfo = {
+      id: data.id,
+      name: data.name,
+      imageUrl: data.images?.[0]?.url || null,
+      trackCount: data.tracks?.total || data.tracks?.items?.length || data.items?.length || 0,
+    };
+
+    // Extract tracks
+    const tracks: Track[] = [];
+    let items: any[] = [];
+
+    if (Array.isArray(data.tracks?.items)) {
+      items = data.tracks.items;
+    } else if (Array.isArray(data.items)) {
+      items = data.items;
     }
     console.log('Items found:', items.length);
 
-    if (items.length > 0) {
-      console.log('First item structure:', JSON.stringify(items[0], null, 2).substring(0, 500));
-    }
-
     for (const item of items) {
-      // Skip local files
-      if (item.is_local) {
-        console.log('Skipping local file');
-        continue;
-      }
-
-      // Handle different response structures - track could be nested or direct
+      if (item.is_local) continue;
       const track = item.track as any;
-
-      if (!track || !track.id) {
-        console.log('Skipping item - no track or track id');
-        continue;
-      }
+      if (!track || !track.id) continue;
 
       tracks.push({
         id: track.id,
@@ -233,25 +184,21 @@ export class SpotifyService {
       });
     }
 
-    // Handle pagination if there are more tracks (playlist > 100 tracks)
-    let nextUrl = playlist.tracks?.next || playlist.next;
+    // Handle pagination if there are more tracks
+    let nextUrl = data.tracks?.next;
     while (nextUrl) {
-      console.log('Fetching more tracks from:', nextUrl);
+      console.log('Fetching more tracks...');
       const nextResponse = await fetch(nextUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!nextResponse.ok) {
         console.error('Failed to get more tracks:', nextResponse.status);
-        break; // Stop pagination but return what we have
+        break;
       }
 
       const nextData = await nextResponse.json();
-      const nextItems: SpotifyPlaylistTrack[] = nextData.items || [];
-
-      for (const item of nextItems) {
+      for (const item of (nextData.items || [])) {
         if (item.is_local) continue;
         const track = item.track as any;
         if (!track || !track.id) continue;
@@ -275,7 +222,7 @@ export class SpotifyService {
     }
 
     console.log('Total tracks loaded:', tracks.length);
-    return tracks;
+    return { info, tracks };
   }
 
   /**
