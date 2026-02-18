@@ -364,6 +364,7 @@ app.prepare().then(() => {
 
       // Test specific playlist if provided
       let specificPlaylistTest = null;
+      let tracksTest = null;
       if (playlistId) {
         const playlistResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
           headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
@@ -372,6 +373,15 @@ app.prepare().then(() => {
           id: playlistId,
           status: playlistResponse.status,
           response: (await playlistResponse.text()).substring(0, 500)
+        };
+
+        // Test tracks endpoint specifically
+        const tracksResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=5`, {
+          headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
+        });
+        tracksTest = {
+          status: tracksResponse.status,
+          response: (await tracksResponse.text()).substring(0, 500)
         };
       }
 
@@ -382,6 +392,7 @@ app.prepare().then(() => {
           response: myPlaylistsData.substring(0, 1000)
         },
         specificPlaylistTest,
+        tracksTest,
         tokenExpiresAt: new Date(room.spotifyAuth.expiresAt).toISOString()
       });
     } catch (error: any) {
