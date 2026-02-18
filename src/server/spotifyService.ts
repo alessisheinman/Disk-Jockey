@@ -166,6 +166,12 @@ export class SpotifyService {
       }
     );
 
+    // Handle rate limiting
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After') || '5';
+      throw new Error(`Rate limited by Spotify. Please wait ${retryAfter} seconds and try again.`);
+    }
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
@@ -198,30 +204,32 @@ export class SpotifyService {
     }
 
     for (const item of items) {
-      // Skip local files and null tracks
-      if (item.is_local || !item.track) {
-        console.log('Skipping item - is_local:', item.is_local, 'has track:', !!item.track);
+      // Skip local files
+      if (item.is_local) {
+        console.log('Skipping local file');
         continue;
       }
 
-      // Skip unplayable tracks
-      if (item.track.is_playable === false) {
-        console.log('Skipping unplayable track:', item.track.name);
+      // Handle different response structures - track could be nested or direct
+      const track = item.track || item;
+
+      if (!track || !track.id) {
+        console.log('Skipping item - no track or track id');
         continue;
       }
 
       tracks.push({
-        id: item.track.id,
-        uri: item.track.uri,
-        name: item.track.name,
-        artists: item.track.artists.map((a) => ({
-          id: a.id,
-          name: a.name,
+        id: track.id,
+        uri: track.uri || `spotify:track:${track.id}`,
+        name: track.name || 'Unknown',
+        artists: (track.artists || []).map((a: any) => ({
+          id: a.id || '',
+          name: a.name || 'Unknown Artist',
         })),
-        albumName: item.track.album.name,
-        albumImageUrl: item.track.album.images?.[0]?.url || null,
-        durationMs: item.track.duration_ms,
-        previewUrl: item.track.preview_url,
+        albumName: track.album?.name || 'Unknown Album',
+        albumImageUrl: track.album?.images?.[0]?.url || null,
+        durationMs: track.duration_ms || 0,
+        previewUrl: track.preview_url || null,
       });
     }
 
@@ -244,21 +252,22 @@ export class SpotifyService {
       const nextItems: SpotifyPlaylistTrack[] = nextData.items || [];
 
       for (const item of nextItems) {
-        if (item.is_local || !item.track) continue;
-        if (item.track.is_playable === false) continue;
+        if (item.is_local) continue;
+        const track = item.track || item;
+        if (!track || !track.id) continue;
 
         tracks.push({
-          id: item.track.id,
-          uri: item.track.uri,
-          name: item.track.name,
-          artists: item.track.artists.map((a) => ({
-            id: a.id,
-            name: a.name,
+          id: track.id,
+          uri: track.uri || `spotify:track:${track.id}`,
+          name: track.name || 'Unknown',
+          artists: (track.artists || []).map((a: any) => ({
+            id: a.id || '',
+            name: a.name || 'Unknown Artist',
           })),
-          albumName: item.track.album.name,
-          albumImageUrl: item.track.album.images?.[0]?.url || null,
-          durationMs: item.track.duration_ms,
-          previewUrl: item.track.preview_url,
+          albumName: track.album?.name || 'Unknown Album',
+          albumImageUrl: track.album?.images?.[0]?.url || null,
+          durationMs: track.duration_ms || 0,
+          previewUrl: track.preview_url || null,
         });
       }
 
