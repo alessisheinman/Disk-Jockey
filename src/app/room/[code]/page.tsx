@@ -69,7 +69,6 @@ export default function RoomPage() {
   } | null>(null);
 
   // Spotify state
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [spotifyPlayer, setSpotifyPlayer] = useState<any>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
