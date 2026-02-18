@@ -180,16 +180,25 @@ export class SpotifyService {
     }
 
     const playlist = await response.json();
+    console.log('Playlist response keys:', Object.keys(playlist));
+    console.log('Playlist tracks:', playlist.tracks ? Object.keys(playlist.tracks) : 'no tracks');
+    console.log('Playlist tracks.items length:', playlist.tracks?.items?.length);
     const items: SpotifyPlaylistTrack[] = playlist.tracks?.items || [];
+
+    if (items.length > 0) {
+      console.log('First item structure:', JSON.stringify(items[0], null, 2).substring(0, 500));
+    }
 
     for (const item of items) {
       // Skip local files and null tracks
       if (item.is_local || !item.track) {
+        console.log('Skipping item - is_local:', item.is_local, 'has track:', !!item.track);
         continue;
       }
 
       // Skip unplayable tracks
       if (item.track.is_playable === false) {
+        console.log('Skipping unplayable track:', item.track.name);
         continue;
       }
 
