@@ -140,7 +140,7 @@ export class SpotifyService {
       id: data.id,
       name: data.name,
       imageUrl: data.images?.[0]?.url || null,
-      trackCount: data.tracks.total,
+      trackCount: data.tracks?.total || data.tracks?.items?.length || 0,
     };
   }
 
