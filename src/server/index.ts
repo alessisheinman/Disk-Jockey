@@ -335,6 +335,43 @@ app.prepare().then(() => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Debug endpoint to test Spotify token
+  server.get('/debug/spotify/:roomCode', async (req, res) => {
+    const room = roomManager.getRoom(req.params.roomCode);
+    if (!room) {
+      return res.json({ error: 'Room not found' });
+    }
+    if (!room.spotifyAuth) {
+      return res.json({ error: 'No Spotify auth' });
+    }
+
+    try {
+      // Test the token by calling /me
+      const meResponse = await fetch('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
+      });
+      const meData = await meResponse.json();
+
+      // Try to get a simple public playlist
+      const playlistResponse = await fetch('https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M', {
+        headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
+      });
+      const playlistStatus = playlistResponse.status;
+      const playlistData = await playlistResponse.text();
+
+      res.json({
+        user: meData,
+        playlistTest: {
+          status: playlistStatus,
+          response: playlistData.substring(0, 500)
+        },
+        tokenExpiresAt: new Date(room.spotifyAuth.expiresAt).toISOString()
+      });
+    } catch (error: any) {
+      res.json({ error: error.message });
+    }
+  });
+
   // Handle all other routes with Next.js
   server.all('*', (req, res) => {
     return handle(req, res);
