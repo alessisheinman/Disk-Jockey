@@ -119,9 +119,8 @@ export class SpotifyService {
    * Get playlist info
    */
   async getPlaylistInfo(accessToken: string, playlistId: string): Promise<PlaylistInfo> {
-    // Simplified request without fields parameter
     const response = await fetch(
-      `${SPOTIFY_API_BASE}/playlists/${playlistId}?market=from_token`,
+      `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -160,9 +159,8 @@ export class SpotifyService {
     console.log('Getting playlist tracks for:', playlistId);
 
     while (hasMore) {
-      // Simplified request without fields parameter to avoid permission issues
       const response = await fetch(
-        `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}&market=from_token`,
+        `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
