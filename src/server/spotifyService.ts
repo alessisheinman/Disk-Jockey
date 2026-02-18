@@ -181,8 +181,16 @@ export class SpotifyService {
 
     const playlist = await response.json();
     console.log('Playlist response keys:', Object.keys(playlist));
+    console.log('playlist.tracks type:', typeof playlist.tracks);
+    console.log('playlist.tracks?.items type:', typeof playlist.tracks?.items);
+
     // Tracks can be in playlist.tracks.items OR playlist.items depending on endpoint
-    const items: SpotifyPlaylistTrack[] = playlist.tracks?.items || playlist.items || [];
+    let items: SpotifyPlaylistTrack[] = [];
+    if (Array.isArray(playlist.tracks?.items)) {
+      items = playlist.tracks.items;
+    } else if (Array.isArray(playlist.items)) {
+      items = playlist.items;
+    }
     console.log('Items found:', items.length);
 
     if (items.length > 0) {
