@@ -145,56 +145,90 @@ export class SpotifyService {
   }
 
   /**
-   * Get all tracks from a playlist
+   * Get all tracks from a playlist using the main playlist endpoint
+   * (the /tracks endpoint returns 403 for apps in Development Mode)
    */
   async getPlaylistTracks(
     accessToken: string,
     playlistId: string
   ): Promise<Track[]> {
     const tracks: Track[] = [];
-    let offset = 0;
-    const limit = 100;
-    let hasMore = true;
 
     console.log('Getting playlist tracks for:', playlistId);
 
-    while (hasMore) {
-      const response = await fetch(
-        `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+    // Get the playlist with tracks included
+    const response = await fetch(
+      `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
-        // Parse for better error message
-        let errorMsg = `Failed to get playlist tracks: ${response.status}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.error?.message) {
-            errorMsg = `Spotify error: ${errorJson.error.message}`;
-          }
-        } catch {}
-        throw new Error(errorMsg);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
+      let errorMsg = `Failed to get playlist: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error?.message) {
+          errorMsg = `Spotify error: ${errorJson.error.message}`;
+        }
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    const playlist = await response.json();
+    const items: SpotifyPlaylistTrack[] = playlist.tracks?.items || [];
+
+    for (const item of items) {
+      // Skip local files and null tracks
+      if (item.is_local || !item.track) {
+        continue;
       }
 
-      const data = await response.json();
-      const items: SpotifyPlaylistTrack[] = data.items;
+      // Skip unplayable tracks
+      if (item.track.is_playable === false) {
+        continue;
+      }
 
-      for (const item of items) {
-        // Skip local files and null tracks
-        if (item.is_local || !item.track) {
-          continue;
-        }
+      tracks.push({
+        id: item.track.id,
+        uri: item.track.uri,
+        name: item.track.name,
+        artists: item.track.artists.map((a) => ({
+          id: a.id,
+          name: a.name,
+        })),
+        albumName: item.track.album.name,
+        albumImageUrl: item.track.album.images?.[0]?.url || null,
+        durationMs: item.track.duration_ms,
+        previewUrl: item.track.preview_url,
+      });
+    }
 
-        // Skip unplayable tracks
-        if (item.track.is_playable === false) {
-          continue;
-        }
+    // Handle pagination if there are more tracks (playlist > 100 tracks)
+    let nextUrl = playlist.tracks?.next;
+    while (nextUrl) {
+      console.log('Fetching more tracks from:', nextUrl);
+      const nextResponse = await fetch(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!nextResponse.ok) {
+        console.error('Failed to get more tracks:', nextResponse.status);
+        break; // Stop pagination but return what we have
+      }
+
+      const nextData = await nextResponse.json();
+      const nextItems: SpotifyPlaylistTrack[] = nextData.items || [];
+
+      for (const item of nextItems) {
+        if (item.is_local || !item.track) continue;
+        if (item.track.is_playable === false) continue;
 
         tracks.push({
           id: item.track.id,
@@ -211,10 +245,10 @@ export class SpotifyService {
         });
       }
 
-      offset += limit;
-      hasMore = items.length === limit;
+      nextUrl = nextData.next;
     }
 
+    console.log('Total tracks loaded:', tracks.length);
     return tracks;
   }
 
