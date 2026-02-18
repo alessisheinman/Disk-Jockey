@@ -347,6 +347,7 @@ app.prepare().then(() => {
 
     const playlistParam = req.query.playlist as string;
     const playlistId = playlistParam ? spotifyService.parsePlaylistId(playlistParam) : null;
+    console.log('Debug - playlistParam:', playlistParam, 'playlistId:', playlistId);
 
     try {
       // Test the token by calling /me
@@ -386,6 +387,7 @@ app.prepare().then(() => {
       }
 
       res.json({
+        debug: { playlistParam, playlistId },
         user: meData,
         myPlaylists: {
           status: myPlaylistsStatus,
