@@ -192,7 +192,7 @@ export default function RoomPage() {
     });
 
     socket.on('playerSubmitted', ({ playerId: submittedId }) => {
-      setSubmittedPlayers((prev) => new Set([...prev, submittedId]));
+      setSubmittedPlayers((prev) => new Set([...Array.from(prev), submittedId]));
     });
 
     socket.on('roundEnded', ({ track, results }) => {

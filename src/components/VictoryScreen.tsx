@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FinalStanding } from '@/types';
 import { cn } from '@/lib/utils';
 import { Trophy, Medal, RotateCcw, Home } from 'lucide-react';
@@ -26,7 +26,6 @@ export default function VictoryScreen({
 }: VictoryScreenProps) {
   const router = useRouter();
   const [showConfetti, setShowConfetti] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Check if current player is the winner
   const isWinner = currentPlayerId === winnerId;

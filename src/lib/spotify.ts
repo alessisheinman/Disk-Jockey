@@ -1,8 +1,10 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 declare global {
   interface Window {
-    Spotify: typeof Spotify;
+    Spotify: any;
     onSpotifyWebPlaybackSDKReady: () => void;
   }
 }
@@ -64,20 +66,24 @@ export async function refreshAccessToken(refreshToken: string): Promise<SpotifyT
 // Load Spotify Web Playback SDK
 export function loadSpotifySDK(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (window.Spotify) {
+    if (typeof window !== 'undefined' && window.Spotify) {
       resolve();
       return;
     }
 
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      resolve();
-    };
+    if (typeof window !== 'undefined') {
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        resolve();
+      };
 
-    const script = document.createElement('script');
-    script.src = 'https://sdk.scdn.co/spotify-player.js';
-    script.async = true;
-    script.onerror = () => reject(new Error('Failed to load Spotify SDK'));
-    document.body.appendChild(script);
+      const script = document.createElement('script');
+      script.src = 'https://sdk.scdn.co/spotify-player.js';
+      script.async = true;
+      script.onerror = () => reject(new Error('Failed to load Spotify SDK'));
+      document.body.appendChild(script);
+    } else {
+      reject(new Error('Window not available'));
+    }
   });
 }
 
@@ -88,40 +94,40 @@ export function createSpotifyPlayer(
   onReady: (deviceId: string) => void,
   onNotReady: () => void,
   onError: (error: Error) => void,
-  onStateChange: (state: Spotify.PlaybackState | null) => void
-): Spotify.Player {
+  onStateChange: (state: any) => void
+): any {
   const player = new window.Spotify.Player({
     name,
-    getOAuthToken: (cb) => cb(accessToken),
+    getOAuthToken: (cb: (token: string) => void) => cb(accessToken),
     volume: 0.5,
   });
 
-  player.addListener('ready', ({ device_id }) => {
+  player.addListener('ready', ({ device_id }: { device_id: string }) => {
     console.log('Spotify player ready with device ID:', device_id);
     onReady(device_id);
   });
 
-  player.addListener('not_ready', ({ device_id }) => {
+  player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
     console.log('Spotify player not ready:', device_id);
     onNotReady();
   });
 
-  player.addListener('initialization_error', ({ message }) => {
+  player.addListener('initialization_error', ({ message }: { message: string }) => {
     console.error('Initialization error:', message);
     onError(new Error(message));
   });
 
-  player.addListener('authentication_error', ({ message }) => {
+  player.addListener('authentication_error', ({ message }: { message: string }) => {
     console.error('Authentication error:', message);
     onError(new Error(message));
   });
 
-  player.addListener('account_error', ({ message }) => {
+  player.addListener('account_error', ({ message }: { message: string }) => {
     console.error('Account error (Premium required):', message);
     onError(new Error('Spotify Premium required'));
   });
 
-  player.addListener('player_state_changed', (state) => {
+  player.addListener('player_state_changed', (state: any) => {
     onStateChange(state);
   });
 
