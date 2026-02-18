@@ -171,7 +171,15 @@ export class SpotifyService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
-        throw new Error(`Failed to get playlist tracks: ${response.status}`);
+        // Parse for better error message
+        let errorMsg = `Failed to get playlist tracks: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error?.message) {
+            errorMsg = `Spotify error: ${errorJson.error.message}`;
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
