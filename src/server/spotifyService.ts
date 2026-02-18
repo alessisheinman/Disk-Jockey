@@ -129,7 +129,9 @@ export class SpotifyService {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to get playlist info');
+      const errorText = await response.text();
+      console.error('Spotify getPlaylistInfo failed:', response.status, errorText);
+      throw new Error(`Failed to get playlist info: ${response.status}`);
     }
 
     const data = await response.json();
@@ -154,6 +156,8 @@ export class SpotifyService {
     const limit = 100;
     let hasMore = true;
 
+    console.log('Getting playlist tracks for:', playlistId);
+
     while (hasMore) {
       const response = await fetch(
         `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=${limit}&fields=items(track(id,uri,name,artists(id,name),album(name,images),duration_ms,preview_url,is_playable),is_local)`,
@@ -165,7 +169,9 @@ export class SpotifyService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to get playlist tracks');
+        const errorText = await response.text();
+        console.error('Spotify getPlaylistTracks failed:', response.status, errorText);
+        throw new Error(`Failed to get playlist tracks: ${response.status}`);
       }
 
       const data = await response.json();
@@ -210,19 +216,29 @@ export class SpotifyService {
   async ensureValidToken(auth: SpotifyAuth): Promise<SpotifyAuth> {
     // Check if token expires in less than 5 minutes
     const expiresInMs = auth.expiresAt - Date.now();
+    console.log('Token expires in ms:', expiresInMs);
+
     if (expiresInMs > 5 * 60 * 1000) {
+      console.log('Token still valid');
       return auth;
     }
 
     // Refresh the token
-    const tokenResponse = await this.refreshToken(auth.refreshToken);
+    console.log('Refreshing token...');
+    try {
+      const tokenResponse = await this.refreshToken(auth.refreshToken);
+      console.log('Token refreshed successfully');
 
-    return {
-      accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token || auth.refreshToken,
-      expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-      userId: auth.userId,
-    };
+      return {
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token || auth.refreshToken,
+        expiresAt: Date.now() + tokenResponse.expires_in * 1000,
+        userId: auth.userId,
+      };
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw error;
+    }
   }
 
   /**

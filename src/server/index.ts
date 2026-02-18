@@ -210,20 +210,29 @@ app.prepare().then(() => {
       }
 
       try {
+        console.log('Loading playlist, input:', data.playlistId);
+        console.log('Room has Spotify auth:', !!room.spotifyAuth);
+
         // Ensure token is valid
         room.spotifyAuth = await spotifyService.ensureValidToken(room.spotifyAuth);
+        console.log('Token validated, expires at:', new Date(room.spotifyAuth.expiresAt).toISOString());
 
         const playlistId = spotifyService.parsePlaylistId(data.playlistId);
+        console.log('Parsed playlist ID:', playlistId);
+
         if (!playlistId) {
           socket.emit('error', { message: 'Invalid playlist ID or URL' });
           return;
         }
 
         // Get playlist info and tracks
+        console.log('Fetching playlist info and tracks...');
         const [playlistInfo, tracks] = await Promise.all([
           spotifyService.getPlaylistInfo(room.spotifyAuth.accessToken, playlistId),
           spotifyService.getPlaylistTracks(room.spotifyAuth.accessToken, playlistId),
         ]);
+        console.log('Playlist info:', playlistInfo);
+        console.log('Tracks count:', tracks.length);
 
         // Shuffle tracks
         room.tracks = spotifyService.shuffleArray(tracks);
@@ -241,9 +250,10 @@ app.prepare().then(() => {
         });
 
         console.log(`Playlist loaded for room ${room.code}: ${playlistInfo.name} (${tracks.length} tracks)`);
-      } catch (error) {
-        console.error('Error loading playlist:', error);
-        socket.emit('error', { message: 'Failed to load playlist' });
+      } catch (error: any) {
+        console.error('Error loading playlist:', error.message || error);
+        console.error('Full error:', error);
+        socket.emit('error', { message: `Failed to load playlist: ${error.message || 'Unknown error'}` });
       }
     });
 

@@ -341,7 +341,7 @@ export const DEFAULT_PLAYLISTS: DefaultPlaylist[] = [
   },
   {
     id: '37i9dQZF1DX4SBhb3fqCJd',
-    name: 'Are & Be',
+    name: 'R&B',
     description: 'The best in R&B right now',
   },
   {
