@@ -140,7 +140,7 @@ export class SpotifyService {
       id: data.id,
       name: data.name,
       imageUrl: data.images?.[0]?.url || null,
-      trackCount: data.tracks?.total || data.tracks?.items?.length || 0,
+      trackCount: data.tracks?.total || data.tracks?.items?.length || data.items?.length || 0,
     };
   }
 
@@ -181,9 +181,9 @@ export class SpotifyService {
 
     const playlist = await response.json();
     console.log('Playlist response keys:', Object.keys(playlist));
-    console.log('Playlist tracks:', playlist.tracks ? Object.keys(playlist.tracks) : 'no tracks');
-    console.log('Playlist tracks.items length:', playlist.tracks?.items?.length);
-    const items: SpotifyPlaylistTrack[] = playlist.tracks?.items || [];
+    // Tracks can be in playlist.tracks.items OR playlist.items depending on endpoint
+    const items: SpotifyPlaylistTrack[] = playlist.tracks?.items || playlist.items || [];
+    console.log('Items found:', items.length);
 
     if (items.length > 0) {
       console.log('First item structure:', JSON.stringify(items[0], null, 2).substring(0, 500));
@@ -218,7 +218,7 @@ export class SpotifyService {
     }
 
     // Handle pagination if there are more tracks (playlist > 100 tracks)
-    let nextUrl = playlist.tracks?.next;
+    let nextUrl = playlist.tracks?.next || playlist.next;
     while (nextUrl) {
       console.log('Fetching more tracks from:', nextUrl);
       const nextResponse = await fetch(nextUrl, {
