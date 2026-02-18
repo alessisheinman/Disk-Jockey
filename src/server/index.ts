@@ -21,6 +21,10 @@ const port = parseInt(process.env.PORT || '3000', 10);
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
+// Rate limiting: Track last playlist load time per room
+const lastPlaylistLoad = new Map<string, number>();
+const PLAYLIST_LOAD_COOLDOWN = 5000; // 5 seconds between playlist loads
+
 
 app.prepare().then(() => {
   const server = express();
@@ -208,6 +212,15 @@ app.prepare().then(() => {
         socket.emit('error', { message: 'Spotify not connected' });
         return;
       }
+      // Rate limiting check
+      const lastLoad = lastPlaylistLoad.get(room.code);
+      const now = Date.now();
+      if (lastLoad && (now - lastLoad) < PLAYLIST_LOAD_COOLDOWN) {
+        const waitTime = Math.ceil((PLAYLIST_LOAD_COOLDOWN - (now - lastLoad)) / 1000);
+        socket.emit('error', { message: 'Please wait ' + waitTime + ' seconds before loading another playlist' });
+        return;
+      }
+      lastPlaylistLoad.set(room.code, now);
 
       try {
         console.log('Loading playlist, input:', data.playlistId);
@@ -333,72 +346,6 @@ app.prepare().then(() => {
   // Health check endpoint
   server.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // Debug endpoint to test Spotify token
-  server.get('/debug/spotify/:roomCode', async (req, res) => {
-    const room = roomManager.getRoom(req.params.roomCode);
-    if (!room) {
-      return res.json({ error: 'Room not found' });
-    }
-    if (!room.spotifyAuth) {
-      return res.json({ error: 'No Spotify auth' });
-    }
-
-    const playlistParam = req.query.playlist as string || '6znTtvgOOBAfhcXDxwICUp';
-    const playlistId = playlistParam;
-
-    try {
-      // Test the token by calling /me
-      const meResponse = await fetch('https://api.spotify.com/v1/me', {
-        headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
-      });
-      const meData = await meResponse.json();
-
-      // Get user's own playlists
-      const myPlaylistsResponse = await fetch('https://api.spotify.com/v1/me/playlists?limit=5', {
-        headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
-      });
-      const myPlaylistsStatus = myPlaylistsResponse.status;
-      const myPlaylistsData = await myPlaylistsResponse.text();
-
-      // Test specific playlist
-      let specificPlaylistTest = null;
-      let tracksTest = null;
-      {
-        const playlistResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-          headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
-        });
-        specificPlaylistTest = {
-          id: playlistId,
-          status: playlistResponse.status,
-          response: (await playlistResponse.text()).substring(0, 500)
-        };
-
-        // Test tracks endpoint specifically
-        const tracksResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=5`, {
-          headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
-        });
-        tracksTest = {
-          status: tracksResponse.status,
-          response: (await tracksResponse.text()).substring(0, 500)
-        };
-      }
-
-      res.json({
-        debug: { playlistParam, playlistId },
-        user: meData,
-        myPlaylists: {
-          status: myPlaylistsStatus,
-          response: myPlaylistsData.substring(0, 1000)
-        },
-        specificPlaylistTest,
-        tracksTest,
-        tokenExpiresAt: new Date(room.spotifyAuth.expiresAt).toISOString()
-      });
-    } catch (error: any) {
-      res.json({ error: error.message });
-    }
   });
 
   // Handle all other routes with Next.js
