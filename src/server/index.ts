@@ -345,9 +345,8 @@ app.prepare().then(() => {
       return res.json({ error: 'No Spotify auth' });
     }
 
-    const playlistParam = req.query.playlist as string;
-    const playlistId = playlistParam ? spotifyService.parsePlaylistId(playlistParam) : null;
-    console.log('Debug - playlistParam:', playlistParam, 'playlistId:', playlistId);
+    const playlistParam = req.query.playlist as string || '6znTtvgOOBAfhcXDxwICUp';
+    const playlistId = playlistParam;
 
     try {
       // Test the token by calling /me
@@ -363,10 +362,10 @@ app.prepare().then(() => {
       const myPlaylistsStatus = myPlaylistsResponse.status;
       const myPlaylistsData = await myPlaylistsResponse.text();
 
-      // Test specific playlist if provided
+      // Test specific playlist
       let specificPlaylistTest = null;
       let tracksTest = null;
-      if (playlistId) {
+      {
         const playlistResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
           headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
         });
