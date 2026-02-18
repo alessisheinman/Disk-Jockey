@@ -86,41 +86,49 @@ export default function RoomPage() {
   // Initialize socket connection
   useEffect(() => {
     const socket = socketRef.current;
-    const storedPlayerId = localStorage.getItem('diskJockey_playerId');
     const storedNickname = localStorage.getItem('diskJockey_nickname');
     const storedRoomCode = localStorage.getItem('diskJockey_roomCode');
 
     // Check for Spotify tokens in URL (OAuth callback)
     const tokens = parseSpotifyTokensFromUrl();
-    if (tokens) {
-      setAccessToken(tokens.accessToken);
-      setRefreshToken(tokens.refreshToken);
 
-      // Send tokens to server
-      socket.emit('setSpotifyAuth', {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn,
-      });
-    }
+    const joinRoom = () => {
+      // Try to rejoin room
+      if (storedRoomCode?.toUpperCase() === roomCode && storedNickname) {
+        socket.emit('joinRoom', { roomCode, nickname: storedNickname }, (response) => {
+          if (response.success && response.playerId) {
+            setPlayerId(response.playerId);
+            localStorage.setItem('diskJockey_playerId', response.playerId);
 
-    // Try to rejoin room
-    if (storedRoomCode?.toUpperCase() === roomCode && storedNickname) {
-      socket.emit('joinRoom', { roomCode, nickname: storedNickname }, (response) => {
-        if (response.success && response.playerId) {
-          setPlayerId(response.playerId);
-          localStorage.setItem('diskJockey_playerId', response.playerId);
-        } else {
-          // Clear stored data and redirect
-          localStorage.removeItem('diskJockey_playerId');
-          localStorage.removeItem('diskJockey_nickname');
-          localStorage.removeItem('diskJockey_roomCode');
-          router.push('/');
-        }
-        setIsConnecting(false);
-      });
+            // Send Spotify tokens after successfully joining
+            if (tokens) {
+              setAccessToken(tokens.accessToken);
+              setRefreshToken(tokens.refreshToken);
+              socket.emit('setSpotifyAuth', {
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
+                expiresIn: tokens.expiresIn,
+              });
+            }
+          } else {
+            // Clear stored data and redirect
+            localStorage.removeItem('diskJockey_playerId');
+            localStorage.removeItem('diskJockey_nickname');
+            localStorage.removeItem('diskJockey_roomCode');
+            router.push('/');
+          }
+          setIsConnecting(false);
+        });
+      } else {
+        router.push('/');
+      }
+    };
+
+    // Wait for socket to connect before joining
+    if (socket.connected) {
+      joinRoom();
     } else {
-      router.push('/');
+      socket.on('connect', joinRoom);
     }
 
     // Socket event handlers
@@ -271,6 +279,7 @@ export default function RoomPage() {
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      socket.off('connect');
       socket.off('roomJoined');
       socket.off('roomUpdated');
       socket.off('playerJoined');
