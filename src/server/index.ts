@@ -345,6 +345,9 @@ app.prepare().then(() => {
       return res.json({ error: 'No Spotify auth' });
     }
 
+    const playlistParam = req.query.playlist as string;
+    const playlistId = playlistParam ? spotifyService.parsePlaylistId(playlistParam) : null;
+
     try {
       // Test the token by calling /me
       const meResponse = await fetch('https://api.spotify.com/v1/me', {
@@ -352,19 +355,33 @@ app.prepare().then(() => {
       });
       const meData = await meResponse.json();
 
-      // Try to get a simple public playlist
-      const playlistResponse = await fetch('https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M', {
+      // Get user's own playlists
+      const myPlaylistsResponse = await fetch('https://api.spotify.com/v1/me/playlists?limit=5', {
         headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
       });
-      const playlistStatus = playlistResponse.status;
-      const playlistData = await playlistResponse.text();
+      const myPlaylistsStatus = myPlaylistsResponse.status;
+      const myPlaylistsData = await myPlaylistsResponse.text();
+
+      // Test specific playlist if provided
+      let specificPlaylistTest = null;
+      if (playlistId) {
+        const playlistResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+          headers: { Authorization: `Bearer ${room.spotifyAuth.accessToken}` }
+        });
+        specificPlaylistTest = {
+          id: playlistId,
+          status: playlistResponse.status,
+          response: (await playlistResponse.text()).substring(0, 500)
+        };
+      }
 
       res.json({
         user: meData,
-        playlistTest: {
-          status: playlistStatus,
-          response: playlistData.substring(0, 500)
+        myPlaylists: {
+          status: myPlaylistsStatus,
+          response: myPlaylistsData.substring(0, 1000)
         },
+        specificPlaylistTest,
         tokenExpiresAt: new Date(room.spotifyAuth.expiresAt).toISOString()
       });
     } catch (error: any) {
