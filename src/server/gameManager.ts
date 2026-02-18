@@ -66,7 +66,7 @@ class GameManager {
       return { success: false, error: 'Spotify not connected' };
     }
 
-    if (room.tracks.length === 0) {
+    if (!room.playlistId || !room.playlist) {
       return { success: false, error: 'No playlist loaded' };
     }
 
@@ -124,22 +124,38 @@ class GameManager {
       return;
     }
 
-    // Get next track
-    const track = this.getNextTrack(room);
-    if (!track) {
-      // No more tracks, shuffle and reset
-      room.usedTrackIds.clear();
-      const newTrack = this.getNextTrack(room);
-      if (!newTrack) {
-        // Still no tracks? End game
-        this.endGame(roomCode, null);
-        return;
-      }
-      room.gameState.currentTrack = newTrack;
-    } else {
-      room.gameState.currentTrack = track;
+    // Fetch track on-demand from Spotify API
+    if (!room.spotifyAuth || !room.playlistId || !room.playlist) {
+      this.endGame(roomCode, null);
+      return;
     }
 
+    room.spotifyAuth = await spotifyService.ensureValidToken(room.spotifyAuth);
+
+    let track = await spotifyService.getRandomTrack(
+      room.spotifyAuth.accessToken,
+      room.playlistId,
+      room.playlist.trackCount,
+      room.usedTrackIds
+    );
+
+    if (!track) {
+      room.usedTrackIds.clear();
+      track = await spotifyService.getRandomTrack(
+        room.spotifyAuth.accessToken,
+        room.playlistId,
+        room.playlist.trackCount,
+        room.usedTrackIds
+      );
+    }
+
+    if (!track) {
+      this.endGame(roomCode, null);
+      return;
+    }
+
+    room.usedTrackIds.add(track.id);
+    room.gameState.currentTrack = track;
     // Reset player answers for new round
     for (const player of room.players.values()) {
       player.currentAnswer = null;
@@ -179,24 +195,6 @@ class GameManager {
   }
 
   /**
-   * Get the next track to play
-   */
-  private getNextTrack(room: Room): Track | null {
-    const availableTracks = room.tracks.filter(
-      (t) => !room.usedTrackIds.has(t.id)
-    );
-
-    if (availableTracks.length === 0) {
-      return null;
-    }
-
-    // Pick random track
-    const randomIndex = Math.floor(Math.random() * availableTracks.length);
-    const track = availableTracks[randomIndex];
-    room.usedTrackIds.add(track.id);
-
-    return track;
-  }
 
   /**
    * Submit a player's answer

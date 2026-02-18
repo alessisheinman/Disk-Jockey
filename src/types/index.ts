@@ -28,7 +28,8 @@ export interface Room {
   gameState: GameState;
   spotifyAuth: SpotifyAuth | null;
   playlist: PlaylistInfo | null;
-  tracks: Track[];
+  playlistId: string | null;
+  
   usedTrackIds: Set<string>;
   createdAt: number;
   settings: RoomSettings;

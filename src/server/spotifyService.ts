@@ -115,8 +115,76 @@ export class SpotifyService {
     return response.json();
   }
 
+
   /**
-   * Get playlist info and tracks in a single API call
+   * Get playlist info only (no tracks) - efficient for initial load
+   */
+  async getPlaylistInfo(accessToken: string, playlistId: string): Promise<PlaylistInfo> {
+    console.log('Getting playlist info for:', playlistId);
+    const response = await fetch(
+      `${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=id,name,images,tracks.total`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After') || '5';
+      throw new Error(`Rate limited by Spotify. Please wait ${retryAfter} seconds and try again.`);
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get playlist: ${response.status}`);
+    }
+    const data = await response.json();
+    return {
+      id: data.id,
+      name: data.name,
+      imageUrl: data.images?.[0]?.url || null,
+      trackCount: data.tracks?.total || 0,
+    };
+  }
+
+  /**
+   * Get a random track from playlist (on-demand)
+   */
+  async getRandomTrack(
+    accessToken: string,
+    playlistId: string,
+    totalTracks: number,
+    usedTrackIds: Set<string>,
+    maxRetries: number = 10
+  ): Promise<Track | null> {
+    if (usedTrackIds.size >= totalTracks) return null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const offset = Math.floor(Math.random() * totalTracks);
+      const response = await fetch(
+        `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=1`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After') || '5';
+        throw new Error(`Rate limited. Wait ${retryAfter} seconds.`);
+      }
+      if (!response.ok) continue;
+      const data = await response.json();
+      const item = data.items?.[0];
+      if (!item || item.is_local || !item.track?.id) continue;
+      if (usedTrackIds.has(item.track.id)) continue;
+      const t = item.track;
+      return {
+        id: t.id,
+        uri: t.uri || `spotify:track:${t.id}`,
+        name: t.name || 'Unknown',
+        artists: (t.artists || []).map((a: any) => ({ id: a.id || '', name: a.name || 'Unknown' })),
+        albumName: t.album?.name || 'Unknown',
+        albumImageUrl: t.album?.images?.[0]?.url || null,
+        durationMs: t.duration_ms || 0,
+        previewUrl: t.preview_url || null,
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Get playlist info and tracks (legacy)
    */
   async getPlaylistWithTracks(accessToken: string, playlistId: string): Promise<{ info: PlaylistInfo; tracks: Track[] }> {
     console.log('Getting playlist with tracks for:', playlistId);

@@ -238,23 +238,23 @@ app.prepare().then(() => {
           return;
         }
 
-        // Get playlist info and tracks in a single API call
+        // Get playlist info only (tracks fetched on-demand)
         console.log('Fetching playlist...');
-        const { info: playlistInfo, tracks } = await spotifyService.getPlaylistWithTracks(
+        const playlistInfo = await spotifyService.getPlaylistInfo(
           room.spotifyAuth.accessToken,
           playlistId
         );
         console.log('Playlist info:', playlistInfo);
-        console.log('Tracks count:', tracks.length);
+        
 
-        // Shuffle tracks
-        room.tracks = spotifyService.shuffleArray(tracks);
+        // Store playlist ID for on-demand track fetching
+        room.playlistId = playlistId;
         room.playlist = playlistInfo;
         room.usedTrackIds.clear();
 
         socket.emit('playlistLoaded', {
           playlist: playlistInfo,
-          trackCount: tracks.length,
+          trackCount: playlistInfo.trackCount,
         });
 
         // Update room for all players
@@ -262,7 +262,7 @@ app.prepare().then(() => {
           room: roomManager.serializeRoom(room),
         });
 
-        console.log(`Playlist loaded for room ${room.code}: ${playlistInfo.name} (${tracks.length} tracks)`);
+        console.log(`Playlist loaded for room ${room.code}: ${playlistInfo.name} (${playlistInfo.trackCount} tracks)`);
       } catch (error: any) {
         console.error('Error loading playlist:', error.message || error);
         console.error('Full error:', error);

@@ -70,7 +70,7 @@ class RoomManager {
       gameState,
       spotifyAuth: null,
       playlist: null,
-      tracks: [],
+      playlistId: null,
       usedTrackIds: new Set(),
       createdAt: Date.now(),
       settings,
@@ -288,7 +288,7 @@ class RoomManager {
       gameState: room.gameState,
       hasSpotifyAuth: room.spotifyAuth !== null,
       playlist: room.playlist,
-      trackCount: room.tracks.length,
+      trackCount: room.playlist?.trackCount || 0,
       settings: room.settings,
     };
   }
