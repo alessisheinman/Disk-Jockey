@@ -122,7 +122,7 @@ export class SpotifyService {
   async getPlaylistInfo(accessToken: string, playlistId: string): Promise<PlaylistInfo> {
     console.log('Getting playlist info for:', playlistId);
     const response = await fetch(
-      `${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=id,name,images,tracks(total)`,
+      `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (response.status === 429) {
