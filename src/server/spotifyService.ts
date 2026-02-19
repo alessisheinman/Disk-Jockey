@@ -172,9 +172,11 @@ export class SpotifyService {
       if (!response.ok) continue;
       const data = await response.json();
       const item = data.items?.[0];
-      if (!item || item.is_local || !item.track?.id) continue;
-      if (usedTrackIds.has(item.track.id)) continue;
-      const t = item.track;
+      if (!item || item.is_local) continue;
+      // Handle both item.track and item.item formats from Spotify API
+      const t = item.track || item.item;
+      if (!t?.id) continue;
+      if (usedTrackIds.has(t.id)) continue;
       return {
         id: t.id,
         uri: t.uri || `spotify:track:${t.id}`,
