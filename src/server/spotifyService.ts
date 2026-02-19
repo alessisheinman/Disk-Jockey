@@ -165,15 +165,26 @@ export class SpotifyService {
     }
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const offset = Math.floor(Math.random() * totalTracks);
-      const response = await fetch(
-        `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=1`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+      console.log('[getRandomTrack] Attempt', attempt + 1, 'fetching offset', offset);
+      let response;
+      try {
+        response = await fetch(
+          `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?offset=${offset}&limit=1`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+      } catch (fetchError: any) {
+        console.log('[getRandomTrack] Fetch error:', fetchError.message);
+        continue;
+      }
+      console.log('[getRandomTrack] Response status:', response.status);
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After') || '5';
         throw new Error(`Rate limited. Wait ${retryAfter} seconds.`);
       }
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.log('[getRandomTrack] Response not ok, status:', response.status);
+        continue;
+      }
       const data = await response.json();
       console.log('[getRandomTrack] Response keys:', Object.keys(data));
       console.log('[getRandomTrack] data.items:', data.items ? 'exists, length=' + data.items.length : 'undefined');
