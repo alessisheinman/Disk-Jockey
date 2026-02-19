@@ -156,7 +156,7 @@ export class SpotifyService {
     playlistId: string,
     totalTracks: number,
     usedTrackIds: Set<string>,
-    maxRetries: number = 10
+    maxRetries: number = 3
   ): Promise<Track | null> {
     console.log('[getRandomTrack] totalTracks:', totalTracks, 'usedTrackIds.size:', usedTrackIds.size);
     if (usedTrackIds.size >= totalTracks) {
@@ -174,6 +174,7 @@ export class SpotifyService {
         );
       } catch (fetchError: any) {
         console.log('[getRandomTrack] Fetch error:', fetchError.message);
+        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
         continue;
       }
       console.log('[getRandomTrack] Response status:', response.status);
@@ -183,6 +184,7 @@ export class SpotifyService {
       }
       if (!response.ok) {
         console.log('[getRandomTrack] Response not ok, status:', response.status);
+        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
         continue;
       }
       const data = await response.json();

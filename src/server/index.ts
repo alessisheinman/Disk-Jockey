@@ -23,7 +23,11 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 // Rate limiting: Track last playlist load time per room
 const lastPlaylistLoad = new Map<string, number>();
-const PLAYLIST_LOAD_COOLDOWN = 5000; // 5 seconds between playlist loads
+const PLAYLIST_LOAD_COOLDOWN = 30000; // 30 seconds between playlist loads
+
+// Rate limiting: Track last game start time per room
+const lastGameStart = new Map<string, number>();
+const GAME_START_COOLDOWN = 10000; // 10 seconds between game starts
 
 
 app.prepare().then(() => {
@@ -283,6 +287,16 @@ app.prepare().then(() => {
         socket.emit('error', { message: 'Only host can start game' });
         return;
       }
+
+      // Rate limiting check for game starts
+      const lastStart = lastGameStart.get(room.code);
+      const now = Date.now();
+      if (lastStart && (now - lastStart) < GAME_START_COOLDOWN) {
+        const waitTime = Math.ceil((GAME_START_COOLDOWN - (now - lastStart)) / 1000);
+        socket.emit('error', { message: 'Please wait ' + waitTime + ' seconds before starting again' });
+        return;
+      }
+      lastGameStart.set(room.code, now);
 
       const result = await gameManager.startGame(room.code);
       if (!result.success) {
