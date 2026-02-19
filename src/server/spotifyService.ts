@@ -158,7 +158,11 @@ export class SpotifyService {
     usedTrackIds: Set<string>,
     maxRetries: number = 10
   ): Promise<Track | null> {
-    if (usedTrackIds.size >= totalTracks) return null;
+    console.log('[getRandomTrack] totalTracks:', totalTracks, 'usedTrackIds.size:', usedTrackIds.size);
+    if (usedTrackIds.size >= totalTracks) {
+      console.log('[getRandomTrack] All tracks used');
+      return null;
+    }
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const offset = Math.floor(Math.random() * totalTracks);
       const response = await fetch(
@@ -171,11 +175,25 @@ export class SpotifyService {
       }
       if (!response.ok) continue;
       const data = await response.json();
+      console.log('[getRandomTrack] Response keys:', Object.keys(data));
+      console.log('[getRandomTrack] data.items:', data.items ? 'exists, length=' + data.items.length : 'undefined');
       const item = data.items?.[0];
-      if (!item || item.is_local) continue;
+      console.log('[getRandomTrack] item:', item ? JSON.stringify(item).substring(0, 500) : 'undefined');
+      if (!item) {
+        console.log('[getRandomTrack] No item at offset', offset);
+        continue;
+      }
+      if (item.is_local) {
+        console.log('[getRandomTrack] Skipping local track');
+        continue;
+      }
       // Handle both item.track and item.item formats from Spotify API
       const t = item.track || item.item;
-      if (!t?.id) continue;
+      console.log('[getRandomTrack] t:', t ? `id=${t.id}, name=${t.name}` : 'null/undefined');
+      if (!t?.id) {
+        console.log('[getRandomTrack] Track has no ID, item keys:', Object.keys(item));
+        continue;
+      }
       if (usedTrackIds.has(t.id)) continue;
       return {
         id: t.id,
