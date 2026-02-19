@@ -120,7 +120,7 @@ export class SpotifyService {
    * Get playlist info only (no tracks) - efficient for initial load
    */
   async getPlaylistInfo(accessToken: string, playlistId: string): Promise<PlaylistInfo> {
-    console.log('Getting playlist info for:', playlistId);
+    console.log('[getPlaylistInfo] Fetching:', playlistId);
     const response = await fetch(
       `${SPOTIFY_API_BASE}/playlists/${playlistId}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -134,11 +134,15 @@ export class SpotifyService {
       throw new Error(`Failed to get playlist: ${response.status}`);
     }
     const data = await response.json();
+    console.log('[getPlaylistInfo] tracks.total:', data.tracks?.total);
+    console.log('[getPlaylistInfo] tracks.items.length:', data.tracks?.items?.length);
+    const trackCount = data.tracks?.total || data.tracks?.items?.length || 0;
+    console.log('[getPlaylistInfo] Using trackCount:', trackCount);
     return {
       id: data.id,
       name: data.name,
       imageUrl: data.images?.[0]?.url || null,
-      trackCount: data.tracks?.total || 0,
+      trackCount,
     };
   }
 
