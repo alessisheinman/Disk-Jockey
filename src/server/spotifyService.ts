@@ -137,7 +137,8 @@ export class SpotifyService {
     console.log('[getPlaylistInfo] FULL RESPONSE:', JSON.stringify(data, null, 2).substring(0, 2000));
     console.log('[getPlaylistInfo] tracks.total:', data.tracks?.total);
     console.log('[getPlaylistInfo] tracks.items.length:', data.tracks?.items?.length);
-    const trackCount = data.tracks?.total || data.tracks?.items?.length || 0;
+    // Spotify returns tracks under "items" not "tracks" for some playlists
+    const trackCount = data.tracks?.total || data.tracks?.items?.length || data.items?.total || data.items?.items?.length || 0;
     console.log('[getPlaylistInfo] Using trackCount:', trackCount);
     return {
       id: data.id,
