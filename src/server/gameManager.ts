@@ -44,6 +44,7 @@ class GameManager {
    * Start the game
    */
   async startGame(roomCode: string): Promise<{ success: boolean; error?: string }> {
+    console.log('[startGame] Starting game for room:', roomCode);
     const room = roomManager.getRoom(roomCode);
     if (!room) {
       return { success: false, error: 'Room not found' };
@@ -90,6 +91,7 @@ class GameManager {
     room.gameState.winnerId = null;
 
     // Emit game starting
+    console.log('[startGame] Emitting gameStarting event');
     this.io?.to(roomCode).emit('gameStarting', {
       startsIn: GAME_CONSTANTS.COUNTDOWN_DURATION_MS,
     });
@@ -106,8 +108,12 @@ class GameManager {
    * Start the next round
    */
   private async startNextRound(roomCode: string): Promise<void> {
+    console.log('[startNextRound] Starting next round for room:', roomCode);
     const room = roomManager.getRoom(roomCode);
-    if (!room) return;
+    if (!room) {
+      console.log('[startNextRound] Room not found');
+      return;
+    }
 
     // Check if game is paused
     if (room.gameState.isPaused) {
@@ -132,6 +138,7 @@ class GameManager {
 
     room.spotifyAuth = await spotifyService.ensureValidToken(room.spotifyAuth);
 
+    console.log('[startNextRound] Fetching random track...');
     let track = await spotifyService.getRandomTrack(
       room.spotifyAuth.accessToken,
       room.playlistId,
@@ -140,6 +147,7 @@ class GameManager {
     );
 
     if (!track) {
+      console.log('[startNextRound] First track fetch returned null, clearing usedTrackIds');
       room.usedTrackIds.clear();
       track = await spotifyService.getRandomTrack(
         room.spotifyAuth.accessToken,
@@ -150,6 +158,7 @@ class GameManager {
     }
 
     if (!track) {
+      console.log('[startNextRound] Second track fetch returned null, ending game');
       this.endGame(roomCode, null);
       return;
     }
@@ -193,8 +202,6 @@ class GameManager {
 
     this.roundTimers.set(roomCode, roundTimer);
   }
-
-  /**
 
   /**
    * Submit a player's answer
